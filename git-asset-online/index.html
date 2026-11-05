@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>GIT Aktivasi &amp; Mutasi Asset Online</title>
+<meta name="description" content="Monitoring aktivasi dan mutasi asset online yang belum selesai, Branch Alfamidi Palu.">
+<meta name="theme-color" content="#2457c5">
+<meta property="og:type" content="website"><meta property="og:title" content="GIT Asset Online - Aktivasi &amp; Mutasi"><meta property="og:description" content="Pantau aktivasi dan mutasi asset online yang belum selesai per toko, AC, AM, dan bulan.">
+<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icons/icon-192.png"><link rel="apple-touch-icon" href="icons/icon-192.png">
+
+<script src="vendor/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="css/style.css"></head><body>
+<header><div class="hd"><div><h1>GIT Asset Online</h1><div>Aktivasi &amp; Mutasi belum selesai · Branch Alfamidi Palu</div></div><div class="cp">&copy; NURHIDAYAT TURILAH<br><span>BRANCH FIXED ASSET ADMINISTRATOR</span></div></div></header><main>
+<div class="sub adm-only">Langkah: (1) unggah REPORT_GIT.xlsx, (2) cari toko, (3) klik Lihat untuk rincian item dan Share ke toko. Semua dihitung di browser Anda.</div>
+<div class="card" id="login" style="display:none"><h2>Masuk</h2><div class="sub">Masukkan kata sandi dari admin untuk melihat data GIT (hanya lihat dan unduh Excel).</div><div class="bar"><input type="password" id="pw" placeholder="Kata sandi" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false"><label class="sm"><input type="checkbox" id="spw"> Tampilkan sandi</label><button id="pwb">Buka</button><span id="pwm" class="sub" style="margin:0"></span></div><div class="sub" id="pwi" style="margin-top:8px"></div></div>
+<div class="card bar">
+ <input type="file" id="f" class="adm-only" accept=".xlsx,.xlsm"><span id="info" class="sub adm-only" style="margin:0">Belum ada file.</span>
+ <span style="flex:1"></span><label class="sm">Bulan input <select id="bln"></select></label><label class="sm adm-only">Tanggal acuan aging <input type="date" id="ref"></label>
+ <label class="adm-only">KRITIS &ge; <input type="number" id="kr" value="60" style="width:60px"> hari</label>
+ <label class="adm-only">TINGGI &ge; <input type="number" id="ti" value="30" style="width:60px"> hari</label>
+</div>
+<div id="out" style="display:none">
+ <div id="warn"></div><div id="prog"></div><div class="kpi" id="kpi"></div>
+ <div class="tabs bar"><button data-t="tk">Cari Toko</button><button class="alt adm-only" data-t="lk">Link Anak Toko</button><button class="alt adm-only" data-t="sh">Share ke Toko</button><button class="alt" data-t="hs">Histori Bulanan</button><button class="alt" data-t="st">Status</button><button class="alt adm-only" data-t="dp">Duplikat &amp; Tolak</button><button class="alt adm-only" data-t="dq">Cek Data</button></div>
+ <div class="card" id="pane"></div>
+</div>
+<script src="vendor/cryptofb.js"></script><script src="js/app.js"></script></main></body></html>
