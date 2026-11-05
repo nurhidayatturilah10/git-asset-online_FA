@@ -1,6 +1,6 @@
 // Service worker: simpan aplikasi di perangkat supaya bisa dibuka tanpa internet.
 // Naikkan angka VERSI setiap kali file aplikasi diubah agar semua perangkat memuat versi terbaru.
-const VERSI = "v8";
+const VERSI = "v9";
 const CACHE = "git-asset-" + VERSI;
 const FILE = ["./", "index.html", "css/style.css", "js/app.js", "vendor/xlsx.full.min.js", "vendor/cryptofb.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILE)).then(() => self.skipWaiting())); });

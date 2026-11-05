@@ -31,20 +31,25 @@ Syarat dan format bisa berubah, selalu ikuti petunjuk terbaru di repo penyedia d
 ## C. Memperbarui aplikasi
 Ubah file, unggah ulang ke repositori (commit). Naikkan angka `VERSI` di `sw.js` (mis. `v2`) agar semua perangkat memuat versi terbaru.
 
-## D. Link untuk anak toko (hanya lihat + unduh Excel)
-Halaman yang sama berubah otomatis menjadi **mode lihat** bila ada file `data.js` di repositori.
-1. Buka halaman admin dengan menambahkan `?admin` di akhir link (contoh `https://NAMAPENGGUNA.github.io/git-asset-online/?admin`), unggah `REPORT_GIT.xlsx`.
-2. Buka tab **Link Anak Toko**, isi kata sandi (minimal 10 karakter, dua kali), klik **Buat data.js**, simpan file.
-3. Unggah `data.js` ke repositori (timpa file lama) lalu Commit. Link biasa (tanpa `?admin`) kini meminta kata sandi.
-4. Bagikan link ke anak toko, dan kata sandi lewat jalur terpisah (pesan pribadi).
-5. Setiap update data: ulangi langkah 1 sampai 3. Link tidak berubah.
+## D. Link anak toko yang otomatis berubah (hanya lihat + unduh Excel)
+Link anak toko = link github.io biasa (tanpa login akun apa pun). Anak toko cukup memasukkan sandi.
 
-Anak toko bisa: mencari toko, melihat AC, AM, Pejabat Toko, item belum selesai dan histori, serta **mengunduh Excel** (1 file, sheet Aktivasi dan Mutasi, hanya item belum selesai sesuai bulan dan toko yang tampil). Mereka tidak bisa mengubah apa pun dan tidak melihat tab admin.
+Pengaturan sekali saja (halaman admin = link yang sama + `?admin` di belakang, atau file lokal / server lokal):
+1. Buka tab **Link Anak Toko**. Isi **sandi** (atau klik Buat sandi acak). Sandi tampil jelas di kolom dan bisa disalin untuk dibagikan.
+2. Buat token GitHub: GitHub > Settings > Developer settings > Personal access tokens > Fine-grained tokens. Pilih hanya repositori ini, izin **Contents: Read and write**. Salin token.
+3. Isi nama pengguna GitHub, nama repositori, cabang (main) dan token. Biarkan **Terbitkan otomatis** tercentang. Klik **Simpan dan terbitkan sekarang**. Pengaturan tersimpan di browser perangkat admin.
+
+Setiap update berikutnya:
+- Cukup unggah `REPORT_GIT.xlsx` terbaru di halaman admin. Data dienkripsi dengan sandi yang sama dan dikirim sendiri ke repositori. Tidak perlu membuat atau mengunggah `data.js`.
+- Link anak toko memuat data baru dalam 1 sampai 2 menit (GitHub Pages membangun ulang). Halaman anak toko yang sedang terbuka memeriksa data baru tiap 3 menit dan saat tab dibuka kembali, lalu memperbarui diri tanpa meminta sandi lagi.
+- Anak toko dapat mencentang **Ingat sandi di perangkat ini** agar tidak mengetik sandi lagi.
 
 Catatan keamanan:
-- Data di `data.js` dienkripsi (AES-256-GCM, kunci dari kata sandi). Siapa pun yang punya link dapat mengunduh file terenkripsi itu, jadi **kekuatan sandi menentukan keamanan**. Pakai kalimat sandi panjang dan jangan dipakai di tempat lain.
-- Riwayat Git menyimpan versi `data.js` lama. Bila sandi bocor, ganti sandi dan buat `data.js` baru; versi lama tetap terbuka dengan sandi lama.
-- Siapa pun yang tahu sandi bisa melihat seluruh toko dan mengunduh Excel. Untuk pembatasan per toko diperlukan sistem login terpisah.
+- Hanya data terenkripsi (AES-256-GCM) yang masuk ke repositori. Kekuatan sandi menentukan keamanan; pakai sandi panjang. Siapa pun yang tahu sandi bisa melihat semua toko.
+- Token memberi akses tulis ke repositori. Simpan hanya di komputer admin, batasi ke satu repositori, dan cabut bila perangkat hilang. Jika ingin tanpa token, gunakan tombol "Unduh data.js (cara manual)" lalu unggah file itu ke repositori.
+- Mengganti sandi: ubah sandi di tab, lalu terbitkan lagi. Perangkat anak toko yang menyimpan sandi lama akan diminta sandi baru.
+- Riwayat Git menyimpan versi `data.js` lama yang terbuka dengan sandi lamanya.
+- Link claude.ai tidak cocok untuk anak toko: data bersama di sana hanya dapat dibaca orang yang login ke akun claude.ai.
 
 ## E. Jaringan lokal (Wi-Fi kantor / satu LAN)
 1. Di komputer yang menyimpan folder ini jalankan `node server.js` (atau VS Code: Terminal > Run Task > "Jalankan server jaringan lokal").

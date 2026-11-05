@@ -44,7 +44,7 @@ function load(buf){
  if(wj){const rows=XLSX.utils.sheet_to_json(wj,{header:1,defval:""}),hi=findHeader(rows,"kode toko");if(hi>=0){const hd=rows[hi],ik=colIdx(hd,["kode toko"]),ip=hd.findIndex(c=>lc(c).includes("pejabat"));
   if(ip>=0)for(let i=hi+1;i<rows.length;i++)if(norm(rows[i][ik]))pj[norm(rows[i][ik]).toUpperCase()]=norm(rows[i][ip])}}
  str.forEach(s=>s.pj=pj[s.kode.toUpperCase()]||"");
- start({akt,mut,str,par,rf});
+ start({akt,mut,str,par,rf});autoPub();
 }
 function start(d){D=d;const{akt,mut,str}=d,rf=d.rf?new Date(d.rf):null;if(d.kr)$("#kr").value=d.kr;if(d.ti)$("#ti").value=d.ti;
  if(VIEW){const e=document.querySelector("header .hd>div>div");if(e)e.textContent="Data per "+GIT_DATA.label+" · mode lihat saja"}
@@ -183,13 +183,20 @@ function render(){
   $("#wa").onclick=()=>window.open("https://wa.me/?text="+encodeURIComponent($("#mt").value),"_blank");
   $("#all").onclick=()=>{saveFile("pesan_wa_toko.txt",keys.map(msg).join("\n\n"+"=".repeat(40)+"\n\n"))};
  }else if(tab==="lk"){
-  p.innerHTML=`<h2>Link untuk anak toko (hanya lihat)</h2><div class="sub">Data aktivasi, mutasi, toko, AC, AM dan Pejabat Toko dienkripsi dengan kata sandi. Anak toko membuka link, memasukkan sandi, lalu bisa mencari toko dan mengunduh Excel. Tidak ada tombol untuk mengubah data.</div>
-  <div class="bar"><input type="password" id="p1" placeholder="Kata sandi (min. 10 karakter)" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false"><input type="password" id="p2" placeholder="Ulangi kata sandi" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false"><button id="mk">Buat data.js</button></div><div id="mm" class="sub"></div>
-  <ol class="sub"><li>Klik <b>Buat data.js</b>, lalu simpan filenya.</li><li>Unggah <code>data.js</code> ke repositori GitHub (timpa file lama). Link yang sama langsung menampilkan data terbaru.</li><li>Bagikan link dan kata sandi lewat jalur berbeda (mis. link di grup, sandi lewat pesan pribadi).</li><li>Halaman admin: tambahkan <code>?admin</code> di akhir link.</li></ol>`;
-  $("#mk").onclick=async()=>{const a=$("#p1").value;if(a.length<10){$("#mm").textContent="Kata sandi minimal 10 karakter.";return}if(a!==$("#p2").value){$("#mm").textContent="Pengulangan sandi tidak sama.";return}
-   $("#mm").textContent="Mengenkripsi (beberapa detik)...";const v=$("#ref").value,lab=+v.slice(8,10)+" "+ML(v.slice(0,7)).replace(" "," ");
-   try{const o=await enc({akt:D.akt.map(({_row,...r})=>r),mut:D.mut.map(({_row,...r})=>r),str:D.str,par:D.par,rf:v,kr:+$("#kr").value,ti:+$("#ti").value},a);
-    const chk=await dec(o,a);if(!chk||chk.akt.length!==D.akt.length)throw new Error("verifikasi sandi gagal");await saveFile("data.js","window.GIT_DATA="+JSON.stringify({...o,label:lab})+";");$("#mm").textContent="Selesai: data.js dibuat dan sandi sudah diuji bisa membuka data (data per "+lab+")."}catch(e){$("#mm").textContent="Gagal: "+e.message}}
+  const a=AD();
+  p.innerHTML=`<h2>Link anak toko (hanya lihat)</h2><div class="sub">Data dienkripsi dengan sandi di bawah. Anak toko membuka link, memasukkan sandi, lalu bisa mencari toko dan mengunduh Excel. Setelah pengaturan GitHub diisi, setiap kali Anda mengunggah file Excel di halaman admin ini, data di link anak toko diperbarui otomatis dengan sandi yang sama (tanpa membuat atau mengunggah data.js).</div>
+  <h2 style="margin-top:12px">1. Sandi anak toko</h2><div class="bar"><input id="pp" type="text" value="${esc(a.pw)}" placeholder="Sandi (min. 10 karakter)" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" style="flex:1;min-width:220px"><button id="pr" class="alt">Buat sandi acak</button><button id="pcp" class="alt">Salin sandi</button></div>
+  <h2 style="margin-top:12px">2. Terbitkan otomatis ke GitHub Pages</h2><div class="sub">Isi sekali. Token: GitHub &gt; Settings &gt; Developer settings &gt; Fine-grained tokens, akses hanya ke repositori ini, izin Contents: Read and write. Token hanya disimpan di browser perangkat ini; jangan dipakai di komputer bersama.</div>
+  <div class="bar"><input id="go" placeholder="Nama pengguna GitHub" value="${esc(a.owner)}"><input id="gr" placeholder="Nama repositori" value="${esc(a.repo)}"><input id="gb" placeholder="Cabang (main)" value="${esc(a.branch)}" style="width:120px"><input id="gt" type="password" placeholder="${a.token?"Token tersimpan (isi untuk mengganti)":"Token GitHub"}" autocomplete="off"></div>
+  <label class="sm"><input type="checkbox" id="ga" ${a.auto===false?"":"checked"}> Terbitkan otomatis setiap kali file Excel diunggah</label>
+  <div class="bar" style="margin-top:8px"><button id="pb">Simpan dan terbitkan sekarang</button><button id="pd" class="alt">Unduh data.js (cara manual)</button></div><div id="pm" class="sub"></div>`;
+  const save=()=>{const o={pw:$("#pp").value.trim(),owner:$("#go").value.trim(),repo:$("#gr").value.trim(),branch:$("#gb").value.trim()||"main",auto:$("#ga").checked};if($("#gt").value.trim())o.token=$("#gt").value.trim();setAD(o);return AD()};
+  const chk=o=>o.pw.length<10?"Sandi minimal 10 karakter.":"";
+  $("#pr").onclick=()=>{const c="abcdefghjkmnpqrstuvwxyz23456789",r=crypto.getRandomValues(new Uint8Array(15));$("#pp").value=[0,5,10].map(k=>[...r.slice(k,k+5)].map(x=>c[x%c.length]).join("")).join("-")};
+  $("#pcp").onclick=()=>{$("#pp").select();(navigator.clipboard?navigator.clipboard.writeText($("#pp").value):Promise.reject()).catch(()=>document.execCommand("copy")).then(()=>{$("#pm").textContent="Sandi disalin."})};
+  $("#pb").onclick=async()=>{const o=save(),m=chk(o);if(m){$("#pm").textContent=m;return}if(!o.owner||!o.repo||!o.token){$("#pm").textContent="Lengkapi nama pengguna, repositori, dan token GitHub.";return}
+   $("#pm").textContent="Mengenkripsi dan menerbitkan...";try{await publishNow(o);$("#pm").innerHTML="Selesai. Link anak toko menampilkan data baru dalam 1 sampai 2 menit, sandi tetap sama.<br>Link: <b>https://"+esc(o.owner)+".github.io/"+esc(o.repo)+"/</b>"}catch(e){$("#pm").textContent=ghErr(e)}};
+  $("#pd").onclick=async()=>{const o=save(),m=chk(o);if(m){$("#pm").textContent=m;return}$("#pm").textContent="Mengenkripsi...";try{await saveFile("data.js",await buildText(o.pw));$("#pm").textContent="data.js dibuat dan sandi sudah diuji bisa membuka data."}catch(e){$("#pm").textContent="Gagal: "+e.message}};
  }else{
   const U=v=>norm(v).toUpperCase();
   const bad=(L)=>L.filter(r=>r.mod==="Aktivasi"?(U(r.toko)&&U(r.toko)!=="SOZ1"&&!kode.has(U(r.toko))):!(U(r.asal)==="SOZ1"&&U(r.toko)==="SOZ1")&&!kode.has(U(r.asal))&&!kode.has(U(r.toko)));
@@ -206,6 +213,21 @@ const ITER=310000;
 async function enc(obj,pw){const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12)),k=GITC.key(pw,salt,ITER);
  const ct=GITC.enc(k,iv,GITC.gz(new TextEncoder().encode(JSON.stringify(obj))));return{v:2,n:ITER,s:b64(salt),i:b64(iv),c:b64(ct)}}
 async function dec(p,pw){const k=GITC.key(pw,ub64(p.s),p.n||ITER);return JSON.parse(new TextDecoder().decode(GITC.gunz(GITC.dec(k,ub64(p.i),ub64(p.c)))))}
+const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
+const AD=()=>{try{return JSON.parse(localStorage.getItem("gitadm")||"{}")}catch(e){return{}}},setAD=o=>{try{localStorage.setItem("gitadm",JSON.stringify({...AD(),...o}))}catch(e){}};
+const ghErr=e=>e instanceof TypeError?"Tidak bisa terhubung ke GitHub. Buka halaman admin dari file lokal, server lokal, atau GitHub Pages dan periksa internet.":"Gagal: "+e.message;
+async function buildText(pw){const v=$("#ref").value,lab=+v.slice(8,10)+" "+ML(v.slice(0,7));await new Promise(r=>setTimeout(r,40));
+ const o=await enc({akt:D.akt.map(({_row,...r})=>r),mut:D.mut.map(({_row,...r})=>r),str:D.str,par:D.par,rf:v,kr:+$("#kr").value,ti:+$("#ti").value},pw);
+ const chk=await dec(o,pw);if(!chk||chk.akt.length!==D.akt.length)throw new Error("verifikasi sandi gagal");return "window.GIT_DATA="+JSON.stringify({...o,label:lab})+";"}
+async function publishNow(a){const text=await buildText(a.pw),br=a.branch||"main",base="https://api.github.com/repos/"+a.owner+"/"+a.repo+"/contents/data.js",
+ hd={Authorization:"Bearer "+a.token,Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"};let sha;
+ const g=await fetch(base+"?ref="+encodeURIComponent(br),{headers:hd,cache:"no-store"});
+ if(g.ok)sha=(await g.json()).sha;else if(g.status!==404)throw new Error("GitHub "+g.status+(g.status===401?" (token tidak valid)":g.status===403?" (token tanpa izin Contents: write)":""));
+ const body={message:"Update data GIT "+new Date().toISOString().slice(0,16).replace("T"," "),content:btoa(text),branch:br};if(sha)body.sha=sha;
+ const r=await fetch(base,{method:"PUT",headers:{...hd,"Content-Type":"application/json"},body:JSON.stringify(body)});
+ if(!r.ok)throw new Error("GitHub "+r.status+": "+(((await r.json().catch(()=>({}))).message)||""));return true}
+async function autoPub(){const a=AD();if(VIEW||!a.auto||!a.pw||!a.owner||!a.repo||!a.token)return;const i=$("#info"),t=" · menerbitkan ke link anak toko...";i.textContent+=t;
+ try{await publishNow(a);i.textContent=i.textContent.replace(t,"")+" · link anak toko diperbarui "+new Date().toTimeString().slice(0,5)}catch(e){i.textContent=i.textContent.replace(t,"")+" · gagal menerbitkan: "+ghErr(e)}}
 function xl(stores){const X=analyse(),mf=$("#bln").value,lb=mf?ML(mf):"Semua bulan",sel=r=>r.pend&&(!mf||r.bln===mf)&&(!stores||stores.has(r.tp)),srt=(a,b)=>(b.age||0)-(a.age||0);
  const bs=r=>{const s=X.info[r.tp]||{};return[r.tp,s.nama||"Branch Palu",s.ac||"",s.am||"",s.pj||""]},wh=r=>WH[r.s]||"Cek Asset Online";
  const A=X.A.filter(sel).sort(srt).map(r=>[...bs(r),fd(r.tgl),norm(r.nttb),r.st,wh(r),norm(r.tag),norm(r.barang),r.age,r.bln?ML(r.bln):""]);
@@ -215,13 +237,20 @@ function xl(stores){const X=analyse(),mf=$("#bln").value,lb=mf?ML(mf):"Semua bul
  add("Aktivasi",[...h0,"TGL NTTB","NO NTTB","STATUS","MENUNGGU","NO TAG","NAMA BARANG","AGING (HARI)","BULAN INPUT"],A,[10,28,20,22,22,12,26,22,12,22,46,10,12]);
  add("Mutasi",[...h0,"TGL PENGAJUAN","NO PENGAJUAN","UU AWAL","UU TUJUAN","STATUS","MENUNGGU","NO PM","TGL PM","NO TAG","NAMA BARANG","AGING (HARI)","BULAN INPUT"],M,[10,28,20,22,22,14,26,9,10,22,12,24,12,22,46,10,12]);
  const nm=stores&&stores.size===1?[...stores][0]:"semua-toko";saveFile("GIT_Belum_Selesai_"+nm+"_"+lb.replace(" ","-")+".xlsx",new Uint8Array(XLSX.write(wb,{bookType:"xlsx",type:"array"})))}
-function enterViewer(){VIEW=true;document.body.classList.add("view");$("#login").style.display="";const e=document.querySelector("header .hd>div>div");if(e)e.textContent="Mode lihat saja · masukkan kata sandi";
- $("#pwi").textContent="Data per "+GIT_DATA.label+".";
- const go1=async()=>{const pw0=$("#pw").value;if(!pw0)return;$("#pwm").textContent="Membuka data...";await new Promise(r=>setTimeout(r,60));
-  let d=null,er=null;for(const pw of [...new Set([pw0,pw0.trim()])]){try{d=await dec(GIT_DATA,pw);break}catch(e){er=e}}
-  if(d){$("#login").style.display="none";start(d)}else $("#pwm").textContent=/tag|ghash|invalid/i.test(String(er&&er.message))?"Kata sandi salah. Periksa huruf besar/kecil dan spasi.":"Data tidak bisa dibuka: "+(er&&er.message||er)};
- if($("#spw"))$("#spw").onchange=e=>{$("#pw").type=e.target.checked?"text":"password"};
- $("#pwb").onclick=go1;$("#pw").onkeydown=e=>{if(e.key==="Enter")go1()}}
+let VPW="";
+async function openData(o,pw0){let d=null,er=null;for(const pw of [...new Set([pw0,pw0.trim()])]){if(!pw)continue;try{d=await dec(o,pw);VPW=pw;break}catch(e){er=e}}return{d,er}}
+async function poll(){try{const r=await fetch("data.js?v="+Date.now(),{cache:"no-store"});if(!r.ok)return;const t=await r.text(),m=t.match(/^\s*window\.GIT_DATA=(\{[\s\S]*\});?\s*$/);if(!m)return;
+ const o=JSON.parse(m[1]);if(o.c===GIT_DATA.c)return;const{d}=await openData(o,VPW);if(!d)return;GIT_DATA=o;const keep=$("#bln").value;start(d);
+ if([...$("#bln").options].some(x=>x.value===keep)){$("#bln").value=keep;render()}$("#pwi").textContent="Data diperbarui otomatis ("+o.label+")."}catch(e){}}
+function enterViewer(){VIEW=true;document.body.classList.add("view");$("#login").style.display="";const hd=t=>{const e=document.querySelector("header .hd>div>div");if(e)e.textContent=t};hd("Mode lihat saja · masukkan kata sandi");
+ $("#pwi").textContent="Data per "+GIT_DATA.label+".";$("#pw").type="text";$("#spw").checked=true;
+ const mem=()=>{try{return localStorage.getItem("gitpw")||""}catch(e){return""}};
+ const go1=async auto=>{const pw0=auto?mem():$("#pw").value;if(!pw0)return;$("#pwm").textContent="Membuka data...";await new Promise(r=>setTimeout(r,60));
+  const{d,er}=await openData(GIT_DATA,pw0);
+  if(d){try{$("#rem").checked?localStorage.setItem("gitpw",VPW):localStorage.removeItem("gitpw")}catch(e){}$("#login").style.display="none";start(d);
+   if(!window._pl){window._pl=setInterval(poll,180000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)poll()})}}
+  else{$("#pwm").textContent=auto?"Sandi tersimpan sudah tidak berlaku. Masukkan sandi terbaru.":/tag|ghash|invalid/i.test(String(er&&er.message))?"Kata sandi salah. Periksa huruf besar/kecil dan spasi.":"Data tidak bisa dibuka: "+(er&&er.message||er);if(auto)try{localStorage.removeItem("gitpw")}catch(e){}}};
+ $("#pwb").onclick=()=>go1(false);$("#pw").onkeydown=e=>{if(e.key==="Enter")go1(false)};$("#spw").onchange=e=>{$("#pw").type=e.target.checked?"text":"password"};if(mem())go1(true)}
 function boot(){if(/[?&]admin/.test(location.search))return;if(window.GIT_DATA){enterViewer();return}const s=document.createElement("script");s.src="data.js?v="+Date.now();s.onload=()=>{if(window.GIT_DATA)enterViewer()};s.onerror=()=>{};document.head.appendChild(s)}
 async function saveFile(name,text){const bytes=typeof text==="string"?new TextEncoder().encode(text):text;
  try{if(window.claude&&claude.use){const d=await claude.use("downloads");if(d){await d.save({filename:name,data:bytes});return}}}catch(e){if(e&&e.code==="declined")return}
