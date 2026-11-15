@@ -2,7 +2,7 @@ const $=s=>document.querySelector(s);
 const MON={JAN:0,FEB:1,MAR:2,APR:3,MEI:4,MAY:4,JUN:5,JUL:6,AGU:7,AUG:7,SEP:8,OKT:9,OCT:9,NOV:10,DES:11,DEC:11};
 const DONE=["done","tolak / batal"],TOLAK="tolak / batal";
 const DEF={"pejabat toko":"Proxy approval Pejabat Toko di Asset Online","am":"Follow-up AM untuk approval","atasan penyerah":"Follow-up Atasan Penyerah","atasan langsung":"Follow-up Atasan langsung","konfirmasi pejabat toko":"Proxy konfirmasi Pejabat Toko","validasi accounting":"Follow-up validasi Accounting","checker fa":"Follow-up tim FA (Checker FA)","gsm":"Follow-up GSM untuk approval","user penerima":"Follow-up user penerima untuk konfirmasi"};
-let VIEW=false,D=null,tab="tk",shareSel="",shMode="all",selK="",F={q:"",p:"",a:"",c:"",j:""};const badge=a=>a==null?"-":`<span class="bd ${a>=+$("#kr").value?"K":a>=+$("#ti").value?"T":""}">${a} hari</span>`;
+let VIEW=false,D=null,EMP={},tab="tk",shareSel="",shMode="all",selK="",F={q:"",p:"",a:"",c:"",j:""};const badge=a=>a==null?"-":`<span class="bd ${a>=+$("#kr").value?"K":a>=+$("#ti").value?"T":""}">${a} hari</span>`;
 const norm=v=>String(v==null?"":v).trim();
 const lc=v=>norm(v).toLowerCase();
 const WH={"pejabat toko":"Toko","konfirmasi pejabat toko":"Toko","user penerima":"Toko","atasan penyerah":"Toko","am":"AM","checker fa":"Tim FA","gsm":"GSM","validasi accounting":"Accounting","atasan langsung":"Atasan langsung"},who=r=>r.aksi?"<b>"+(WH[r.s]||"Toko")+"</b>":(WH[r.s]||"Cek Asset Online"),COL={bs:false,hs:false},H=(id,t)=>`<h2 class="tg"><button class="tgb" data-id="${id}" title="Tampilkan / sembunyikan">${COL[id]?"+":"−"}</button> ${t}</h2>`,pmn=r=>hp(r)?norm(r.nopm):"-",pmt=r=>hp(r)?(fd(r.tsel)||"-"):"-",hp=r=>r.mod==="Mutasi"&&norm(r.nopm),nd=r=>hp(r)?`<b>PM: ${r.nopm}</b><br><span class="sm">Dok: ${norm(r.nttb)}</span>`:norm(r.nttb),td=r=>hp(r)?(fd(r.tsel)||"-"):(fd(r.tgl)||"-"),pmv=r=>r.mod==="Mutasi"?[r.nopm||"-",fd(r.tsel)||"-"]:["-","-"],mk=d=>d.toISOString().slice(0,7),ML=k=>["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"][+k.slice(5)-1]+" "+k.slice(0,4),fd=v=>{const d=toDate(v);return d?d.toISOString().slice(0,10):""};
@@ -15,6 +15,17 @@ function toDate(v){
 }
 function findHeader(rows,key){for(let i=0;i<Math.min(rows.length,30);i++)if(rows[i].some(c=>lc(c)===key))return i;return -1}
 function colIdx(h,names){for(const n of names){const i=h.findIndex(c=>lc(c)===n);if(i>=0)return i}return -1}
+const isV=k=>k==="SOZ1-OFFICE"||k==="SOZ1-WAREHOUSE",OZX=new Set(),OZ="SOZ1",nikn=v=>norm(v).replace(/\D/g,"").replace(/^0+/,"");
+function readDakar(wb){const out={emp:{},pj:{},n:0};
+ const rd=name=>{const ws=wb.Sheets[name];if(!ws)return null;const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:""}),hi=rows.findIndex(r=>r.some(c=>lc(c)==="nik")&&r.some(c=>lc(c)==="name"));return hi<0?null:{h:rows[hi],rows:rows.slice(hi+1)}};
+ const A=rd("DATA KARYAWAN"),cand={};
+ if(A){const h=A.h,ix=n=>colIdx(h,[n]),iN=ix("nik"),iM=ix("name"),iG=ix("position grouping"),iP=ix("position code desc"),iD=ix("department"),iS=ix("store code"),iL=ix("location"),iF=ix("penempatan frc");
+  A.rows.forEach(r=>{const nk=nikn(r[iN]);if(!nk)return;out.n++;const g=lc(r[iG]),rk=g==="chief of store"?1:/^as{1,2}istant chief of store$/.test(g)?2:0,st=norm(r[iS]).toUpperCase(),fr=iF>=0?norm(r[iF]):"",frc=fr&&fr!=="-"?fr.split(" - ")[0].trim().toUpperCase():"";
+   out.emp[nk]=[norm(r[iM]),norm(r[iL]).toUpperCase(),norm(r[iP]),norm(r[iD]),st,"A"];
+   if(rk){const add=(k,t)=>{const c=cand[k],v=+nk;if(!c||rk<c.rk||(rk===c.rk&&v<c.v))cand[k]={rk,v,nik:norm(r[iN]).replace(/^'+/,""),n:norm(r[iM]),p:rk===1?"COS":"ACOS",t}};if(st)add("S|"+st,"");if(frc)add("F|"+frc," penempatan franchise")}})}
+ Object.keys(cand).forEach(k=>{if(k[0]==="S")out.pj[k.slice(2)]=cand[k]});Object.keys(cand).forEach(k=>{if(k[0]==="F"&&!out.pj[k.slice(2)])out.pj[k.slice(2)]=cand[k]});
+ return out}
+function empSubset(){const o={},add=k=>{if(k&&EMP[k])o[k]=EMP[k]};D.mut.forEach(r=>{add(nikn(r.nikt));add(nikn(r.nika))});D.akt.forEach(r=>add(nikn(norm(r.pnr).split("-")[0])));return o}
 function readSheet(wb,name,key,map){
  const ws=wb.Sheets[name];if(!ws)throw new Error("Sheet tidak ada: "+name);
  const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:""});
@@ -28,8 +39,8 @@ function readSheet(wb,name,key,map){
 }
 function load(buf){
  const wb=XLSX.read(buf,{type:"array",cellDates:true});
- const akt=readSheet(wb,"UPDATE AKTIVASI","no nttb",{tgl:["tgl nttb","tanggal","tgl"],nttb:["no nttb"],toko:["uu tujuan","kode toko","uu"],tsel:["tanggal terima"],tag:["no. tag","no tag"],barang:["nama barang","nama asset","nama aset"],status:["status"]});
- const mut=readSheet(wb,"UPDATE MUTASI","no pengajuan",{tgl:["tgl pengajuan","tanggal pengajuan","tgl"],nttb:["no pengajuan"],asal:["uu awal"],toko:["uu tujuan"],tsel:["tgl. pm"],nopm:["no pm"],tag:["no tag","no. tag"],barang:["nama barang","nama asset","nama aset"],status:["status"]});
+ const akt=readSheet(wb,"UPDATE AKTIVASI","no nttb",{tgl:["tgl nttb","tanggal","tgl"],nttb:["no nttb"],pnr:["penerima"],toko:["uu tujuan","kode toko","uu"],tsel:["tanggal terima"],tag:["no. tag","no tag"],barang:["nama barang","nama asset","nama aset"],status:["status"]});
+ const mut=readSheet(wb,"UPDATE MUTASI","no pengajuan",{tgl:["tgl pengajuan","tanggal pengajuan","tgl"],nttb:["no pengajuan"],asal:["uu awal"],toko:["uu tujuan"],tsel:["tgl. pm"],nopm:["no pm"],nika:["nik awal"],nikt:["nik tujuan"],tag:["no tag","no. tag"],barang:["nama barang","nama asset","nama aset"],status:["status"]});
  const str=[];const ws=wb.Sheets["UPDATE STRUKTUR"];
  if(ws){const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:""});const hi=findHeader(rows,"kode toko");
   if(hi>=0){const h=rows[hi],ik=colIdx(h,["kode toko"]),inm=colIdx(h,["nama toko"]),iam=colIdx(h,["nama am","am"]),iac=colIdx(h,["nama ac","ac"]);
@@ -43,10 +54,13 @@ function load(buf){
  const pj={},wj=wb.Sheets["PEJABAT TOKO"];
  if(wj){const rows=XLSX.utils.sheet_to_json(wj,{header:1,defval:""}),hi=findHeader(rows,"kode toko");if(hi>=0){const hd=rows[hi],ik=colIdx(hd,["kode toko"]),ip=hd.findIndex(c=>lc(c).includes("pejabat"));
   if(ip>=0)for(let i=hi+1;i<rows.length;i++)if(norm(rows[i][ik]))pj[norm(rows[i][ik]).toUpperCase()]=norm(rows[i][ip])}}
- str.forEach(s=>s.pj=pj[s.kode.toUpperCase()]||"");
- start({akt,mut,str,par,rf});autoPub();
+ const pjm={};if(wj){const rows=XLSX.utils.sheet_to_json(wj,{header:1,defval:""}),hi=findHeader(rows,"kode toko");if(hi>=0){const hd=rows[hi],ik=colIdx(hd,["kode toko"]),im=hd.findIndex(c=>/pejabat manual/.test(lc(c))),inn=hd.findIndex(c=>/nik manual/.test(lc(c)));
+  if(im>=0)for(let i=hi+1;i<rows.length;i++){const k=norm(rows[i][ik]).toUpperCase(),n=norm(rows[i][im]);if(k&&n)pjm[k]={n,nik:inn>=0?norm(rows[i][inn]):""}}}}
+ const dk=readDakar(wb);
+ str.forEach(s=>{const x=dk.pj[s.kode.toUpperCase()];const m=pjm[s.kode.toUpperCase()];s.pj=x?x.n:(m?m.n:(pj[s.kode.toUpperCase()]||""));s.pjd=x?x.p+(x.t?" "+x.t:"")+" · NIK "+x.nik:(m?"manual"+(m.nik?" · NIK "+m.nik:""):"")});
+ start({akt,mut,str,par,rf,emp:dk.emp});if(dk.n)$("#info").textContent+=" · karyawan "+fmt(dk.n);autoPub();
 }
-function start(d){D=d;const{akt,mut,str}=d,rf=d.rf?new Date(d.rf):null;if(d.kr)$("#kr").value=d.kr;if(d.ti)$("#ti").value=d.ti;
+function start(d){D=d;if(d.emp)EMP=d.emp;const{akt,mut,str}=d,rf=d.rf?new Date(d.rf):null;if(d.kr)$("#kr").value=d.kr;if(d.ti)$("#ti").value=d.ti;
  if(VIEW){const e=document.querySelector("header .hd>div>div");if(e)e.textContent="Data per "+GIT_DATA.label+" · mode lihat saja"}
  const all=akt.concat(mut).map(r=>toDate(r.tgl)).filter(Boolean);
  const mx=all.length?new Date(Math.max(...all)):new Date();
@@ -59,6 +73,7 @@ function start(d){D=d;const{akt,mut,str}=d,rf=d.rf?new Date(d.rf):null;if(d.kr)$
 function analyse(){
  const ref=new Date($("#ref").value+"T00:00:00Z"),kr=+$("#kr").value,ti=+$("#ti").value;
  const kode=new Set(D.str.map(s=>s.kode.toUpperCase())),info=Object.fromEntries(D.str.map(s=>[s.kode,s]));
+ info["SOZ1-OFFICE"]={kode:"SOZ1-OFFICE",nama:"OFFICE SOZ1 (user penerima)",ac:"-",am:"-",pj:"",virt:1};info["SOZ1-WAREHOUSE"]={kode:"SOZ1-WAREHOUSE",nama:"WAREHOUSE SOZ1 (user penerima)",ac:"-",am:"-",pj:"",virt:1};
  const proc=(arr,mod)=>arr.map(r=>{
   const st=norm(r.status),s=lc(st),d=toDate(r.tgl);
   const ds=toDate(r.tsel);return {...r,mod,st,s,bln:d?mk(d):"",bs:ds&&s==="done"?mk(ds):"",pend:!DONE.includes(s),tolak:s===TOLAK,age:d?Math.max(0,Math.floor((ref-d)/864e5)):null,dkey:lc(r.tag)}});
@@ -72,7 +87,11 @@ function analyse(){
    else r.jenis=G.some(x=>x.tolak)?"PENGAJUAN ULANG":"TAG GANDA"});
  }
 const TK=new Set(["pejabat toko","konfirmasi pejabat toko","user penerima","atasan penyerah"]),U=v=>norm(v).toUpperCase();
- for(const r of A.concat(M)){r.aksi=TK.has(r.s);r.tp=kode.has(U(r.toko))?U(r.toko):kode.has(U(r.asal))?U(r.asal):U(r.toko)}
+ for(const r of A.concat(M)){r.aksi=TK.has(r.s);
+  {const ta=U(r.toko);r.oz=ta===OZ;if(r.oz){const raw=r.mod==="Aktivasi"?norm(r.pnr):"",nt=r.mod==="Mutasi"?nikn(r.nikt):nikn(raw.split("-")[0]),na=r.mod==="Mutasi"?nikn(r.nika):"",pe=nt?EMP[nt]:null,se=na?EMP[na]:null;
+   r.pn=pe?pe[0]:(raw.includes("-")?raw.split("-").slice(1).join("-"):"");r.pnik=r.mod==="Mutasi"?norm(r.nikt).replace(/^'+/,""):norm(raw.split("-")[0]);r.ploc=pe?pe[1]:"";r.ppos=pe?pe[2]:"";r.sn=se?se[0]:"";
+   r.unit=!pe?(r.pnik?"Tidak ada di master aktif":"Tidak teridentifikasi"):pe[1]==="DC"?"Warehouse":pe[1]==="OFFICE"?"Office":"Toko / Area";r.vk=pe&&r.pnik?(pe[1]==="OFFICE"?"SOZ1-OFFICE":pe[1]==="DC"?"SOZ1-WAREHOUSE":""):"";r.pdept=pe?pe[3]:"";
+   r.arah=r.mod==="Aktivasi"?"Aktivasi ke "+OZ:(U(r.asal)===OZ?"Internal "+OZ:"Masuk dari toko")}}r.tp=kode.has(U(r.toko))?U(r.toko):kode.has(U(r.asal))?U(r.asal):U(r.toko);if(r.tp===OZ)r.tp=""}
  return{A,M,kr,ti,kode,info};
 }
 const ageCls=(a,kr,ti)=>a==null?"":a>=kr?"K":a>=ti?"T":"";
@@ -116,23 +135,25 @@ function render(){
   $("#ex").onclick=()=>{const h="jenis;modul;no_dokumen;toko;no_tag;barang;status;baris\n",b=X.cur.map(r=>[r.jenis,r.mod,r.nttb,r.toko,r.tag,r.barang,r.st,r._row].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(";")).join("\n");
    saveFile("duplikat_tolak.csv","\ufeff"+h+b)};
  }else if(tab==="tk"){
-  const all=AA.concat(MM),bk={};all.filter(r=>r.pend&&r.tp).forEach(r=>{const o=bk[r.tp]=bk[r.tp]||{n:0,age:0};o.n++;if(r.age>o.age)o.age=r.age});
+  const all=AA.concat(MM),bk={};all.filter(r=>r.pend&&r.tp).forEach(r=>{const o=bk[r.tp]=bk[r.tp]||{n:0,age:0};o.n++;if(r.age>o.age)o.age=r.age});all.filter(r=>r.pend&&r.vk).forEach(r=>{const o=bk[r.vk]=bk[r.vk]||{n:0,age:0};o.n++;if(r.age>o.age)o.age=r.age});
   const fin=all.filter(r=>r.s==="done"&&inM(r)),pp=pa.concat(pm);
   const ks=[...new Set(Object.keys(info).concat(pp.map(r=>r.tp).filter(Boolean)))];
-  const S=ks.map(k=>{const s=info[k]||{},x=pp.filter(r=>r.tp===k),a=x.filter(r=>r.mod==="Aktivasi").length,f=fin.filter(r=>r.tp===k),age=x.length?Math.max(...x.map(r=>r.age||0)):-1;
-   return{k,nama:s.nama||"Branch Palu",am:s.am||"-",ac:s.ac||"-",pj:s.pj||"-",x,a,m:x.length-a,age,bk:(bk[k]||{}).age,bn:(bk[k]||{}).n||0,f,fa:f.filter(r=>r.mod==="Aktivasi").length,fm:f.filter(r=>r.mod==="Mutasi").length,
+  const S=ks.map(k=>{const s=info[k]||{},x=pp.filter(r=>r.tp===k||r.vk===k),a=x.filter(r=>r.mod==="Aktivasi").length,f=fin.filter(r=>r.tp===k||r.vk===k),age=x.length?Math.max(...x.map(r=>r.age||0)):-1;
+   return{k,nama:s.nama||"Branch Palu",am:s.am||"-",ac:s.ac||"-",pj:s.pj||"-",pjd:s.pjd||"",x,a,m:x.length-a,age,bk:(bk[k]||{}).age,bn:(bk[k]||{}).n||0,f,fa:f.filter(r=>r.mod==="Aktivasi").length,fm:f.filter(r=>r.mod==="Mutasi").length,
     pr:!x.length?((bk[k]||{}).n?"BACKLOG":"BERSIH"):age>=kr?"KRITIS":age>=ti?"TINGGI":"NORMAL"}}).sort((u,v)=>v.age-u.age||u.k.localeCompare(v.k));
   const opt=f=>[...new Set(S.map(s=>s[f]))].sort().map(v=>`<option>${v}</option>`).join("");let lastR=[];
   p.innerHTML=`<h2>Cari toko · ${lb}</h2><div class="sub">Ketik kode atau nama toko: saran muncul, pilih atau tekan Enter, profil toko langsung tampil dan tetap tampil walau kotak pencarian dikosongkan (klik Tutup untuk menyembunyikan). Klik judul kolom tabel untuk mengurutkan naik/turun.</div><div class="bar"><div class="qw"><input id="q" placeholder="Ketik kode atau nama toko..." autocomplete="off"><div id="sg" class="sg"></div></div><select id="fp"><option value="">Semua prioritas</option><option>KRITIS</option><option>TINGGI</option><option>NORMAL</option><option>BACKLOG</option><option>BERSIH</option></select><select id="fa"><option value="">Semua AM</option>${opt("am")}</select><select id="fc"><option value="">Semua AC</option>${opt("ac")}</select><select id="fj"><option value="">Aktivasi &amp; Mutasi</option><option value="a">Ada aktivasi belum selesai</option><option value="m">Ada mutasi belum selesai</option></select></div><div id="det"></div><div id="res"></div>`;
   $("#q").value=F.q;$("#fp").value=F.p;$("#fa").value=F.a;$("#fc").value=F.c;$("#fj").value=F.j;
+  const ptab=(x,v)=>v?table(["Modul","Menunggu","Status","Penerima","NIK","Lokasi kerja (master DAKAR)","Departemen","Tgl input","No dokumen","No PM","Tgl PM","No tag","Barang","Aging"],x.map(r=>[r.mod,who(r),r.st,"<b>"+esc(r.pn||"-")+"</b>",r.pnik||"-",r.ploc==="DC"?"DC (Warehouse)":(r.ploc||"-"),esc(r.pdept||"-"),fd(r.tgl),norm(r.nttb),pmn(r),pmt(r),r.tag,r.barang,badge(r.age)])):table(["Modul","Menunggu","Status","Tgl input","No dokumen","No PM","Tgl PM","No tag","Barang","Aging"],x.map(r=>[r.mod,who(r),r.st,fd(r.tgl),norm(r.nttb),pmn(r),pmt(r),r.tag,r.barang,badge(r.age)]));
+  const htab=(f,v)=>v?table(["Modul","Tgl input","Tgl selesai","Penerima","NIK","Lokasi kerja (master DAKAR)","No dokumen","No PM","Tgl PM","No tag","Barang"],f.map(r=>[r.mod,fd(r.tgl),fd(r.tsel),esc(r.pn||"-"),r.pnik||"-",r.ploc==="DC"?"DC (Warehouse)":(r.ploc||"-"),norm(r.nttb),pmn(r),pmt(r),r.tag,r.barang])):table(["Modul","Tgl input","Tgl selesai","No dokumen","No PM","Tgl PM","No tag","Barang"],f.map(r=>[r.mod,fd(r.tgl),fd(r.tsel),norm(r.nttb),pmn(r),pmt(r),r.tag,r.barang]));
   const det=k=>{selK=k;const s=S.find(z=>z.k===k);if(!s){$("#det").innerHTML="";return}
    const x=s.x.slice().sort((u,v)=>(v.age||0)-(u.age||0)),f=s.f.slice().sort((u,v)=>(v.bs||v.bln||"").localeCompare(u.bs||u.bln||""));
-   $("#det").innerHTML=`<div class="card" style="margin-top:12px"><div class="bar"><h2 style="margin:0">${s.k} · ${s.nama}</h2><span style="flex:1"></span>${x.length&&!VIEW?'<button id="sb">Share ke toko</button>':""}<button id="xs" class="alt">Unduh Excel toko ini</button><button id="cl" class="alt">Tutup</button></div>
-   <div class="bar" style="margin:8px 0"><span class="chip">AC: <b>${s.ac}</b></span><span class="chip">AM: <b>${s.am}</b></span><span class="chip">Pejabat Toko: <b>${s.pj}</b></span></div>
+   $("#det").innerHTML=`<div class="card" style="margin-top:12px"><div class="bar"><h2 style="margin:0">${s.k} · ${s.nama}</h2><span style="flex:1"></span>${x.length&&!VIEW?'<button id="sb">Share ke toko</button>':""}<button id="xs" class="alt">${isV(k)?"Unduh Excel (belum selesai + riwayat)":"Unduh Excel toko ini"}</button><button id="cl" class="alt">Tutup</button></div>
+   <div class="bar" style="margin:8px 0">${isV(k)?'<span class="chip">Unit SOZ1 · user penerima, NIK, dan lokasi kerja dari master DAKAR (karyawan aktif)</span>':`<span class="chip">AC: <b>${s.ac}</b></span><span class="chip">AM: <b>${s.am}</b></span><span class="chip">Pejabat Toko: <b>${s.pj}</b>${s.pjd?' <span class="sm">('+esc(s.pjd)+')</span>':""}</span>`}</div>
    <div class="kpi"><div class="t"><b>${s.a}</b><span>Aktivasi belum selesai</span></div><div class="t"><b>${s.m}</b><span>Mutasi belum selesai</span></div><div><b>${s.fa}</b><span>Aktivasi selesai</span></div><div><b>${s.fm}</b><span>Mutasi selesai</span></div></div>
    <div class="sub">Periode: ${lb}. Backlog semua bulan: ${s.bn} item belum selesai${s.bn?", tertua "+s.bk+" hari":""}.</div>${H("bs","Belum selesai ("+x.length+")")}<div class="sb" ${COL.bs?"hidden":""}>`+
-   (x.length?table(["Modul","Menunggu","Status","Tgl input","No dokumen","No PM","Tgl PM","No tag","Barang","Aging"],x.map(r=>[r.mod,who(r),r.st,fd(r.tgl),norm(r.nttb),pmn(r),pmt(r),r.tag,r.barang,badge(r.age)])):'<div class="sub ok">Tidak ada item belum selesai.</div>')+"</div>"+
-   `${H("hs","Histori selesai ("+s.f.length+(s.f.length>100?", tampil 100 terbaru":"")+")")}<div class="sb" ${COL.hs?"hidden":""}>`+(f.length?table(["Modul","Tgl input","Tgl selesai","No dokumen","No PM","Tgl PM","No tag","Barang"],f.slice(0,100).map(r=>[r.mod,fd(r.tgl),fd(r.tsel),norm(r.nttb),pmn(r),pmt(r),r.tag,r.barang])):'<div class="sub">Belum ada histori selesai pada periode ini.</div>')+"</div></div>";
+   (x.length?ptab(x,isV(k)):'<div class="sub ok">Tidak ada item belum selesai.</div>')+"</div>"+
+   `${H("hs","Histori selesai ("+s.f.length+(s.f.length>100?", tampil 100 terbaru":"")+")")}<div class="sb" ${COL.hs?"hidden":""}>`+(f.length?htab(f.slice(0,100),isV(k)):'<div class="sub">Belum ada histori selesai pada periode ini.</div>')+"</div></div>";
    if($("#sb"))$("#sb").onclick=()=>{shareSel=k;go("sh")};$("#xs").onclick=()=>xl(new Set([k]));$("#cl").onclick=()=>{selK="";$("#det").innerHTML=""};$("#det").querySelectorAll(".tg").forEach(g=>g.onclick=()=>{const b=g.querySelector(".tgb"),id=b.dataset.id;COL[id]=!COL[id];b.textContent=COL[id]?"+":"\u2212";g.nextElementSibling.hidden=COL[id]})};
   const draw=()=>{F={q:$("#q").value,p:$("#fp").value,a:$("#fa").value,c:$("#fc").value,j:$("#fj").value};const q=lc(F.q).replace(/\s+-\s+/g," - ");
    lastR=S.filter(s=>(!F.p||s.pr===F.p)&&(!F.a||s.am===F.a)&&(!F.c||s.ac===F.c)&&(!F.j||(F.j==="a"?s.a:s.m))&&(!q||(lc(s.k+" - "+s.nama+" "+s.am+" "+s.ac+" "+s.pj)+" "+s.x.map(r=>lc(r.tag+" "+r.barang)).join(" ")).includes(q)));
@@ -163,7 +184,7 @@ function render(){
   p.querySelectorAll("button[data-m]").forEach(b=>b.onclick=()=>{$("#bln").value=b.dataset.m;go("tk")});
  }else if(tab==="sh"){
   const pass=(r,m)=>m==="all"||(m==="toko"&&r.aksi)||(m==="lain"&&!r.aksi)||m==="s:"+r.s;
-  const by={};pa.concat(pm).forEach(r=>{if(r.tp&&pass(r,shMode))(by[r.tp]=by[r.tp]||[]).push(r)});
+  const by={};pa.concat(pm).forEach(r=>{if(pass(r,shMode))[r.tp,r.vk].filter(Boolean).forEach(k=>(by[k]=by[k]||[]).push(r))});
   const mx=k=>Math.max(0,...by[k].map(r=>r.age||0)),keys=Object.keys(by).sort((a,b)=>mx(b)-mx(a));
   const sts={};pa.concat(pm).forEach(r=>{const o=sts[r.s]=sts[r.s]||{n:r.st,c:0};o.c++});
   const modeOpt='<option value="all">Semua status</option><option value="toko">Hanya menunggu toko (Pejabat Toko, Konfirmasi, User Penerima, Atasan Penyerah)</option><option value="lain">Hanya menunggu pihak lain (AM, Checker FA, GSM, Accounting)</option>'+Object.entries(sts).sort((a,b)=>b[1].c-a[1].c).map(([s,o])=>`<option value="s:${s}">Hanya status ${o.n} (${o.c})</option>`).join("");
@@ -172,9 +193,9 @@ function render(){
   if(!keys.includes(shareSel))shareSel=keys[0];
   const msg=k=>{const x=by[k],s=info[k]||{},g={};x.forEach(r=>(g[r.s]=g[r.s]||[]).push(r));
    const gs=Object.values(g).sort((a,b)=>(b[0].aksi-a[0].aksi)||(Math.max(...b.map(r=>r.age||0))-Math.max(...a.map(r=>r.age||0))));
-   let t=`*FOLLOW-UP APPROVAL ASSET ONLINE*\nToko: ${k} - ${s.nama||"Branch Palu"}\nAC: ${s.ac||"-"}\nPejabat Toko: ${s.pj||"-"}\nAM: ${s.am||"-"}\nPer ${$("#ref").value}\n\nAda *${x.length} item* belum selesai, tertua *${mx(k)} hari*:`;
+   let t=`*FOLLOW-UP APPROVAL ASSET ONLINE*\nToko: ${k} - ${s.nama||"Branch Palu"}${isV(k)?"":`\nAC: ${s.ac||"-"}\nPejabat Toko: ${s.pj||"-"}\nAM: ${s.am||"-"}`}\nPer ${$("#ref").value}\n\nAda *${x.length} item* belum selesai, tertua *${mx(k)} hari*:`;
    gs.forEach(y=>{const tl=D.par[y[0].s]||DEF[y[0].s]||"Cek status di Asset Online";t+=`\n\n*${y[0].st} (${y.length})* - ${tl}`;
-    ["Aktivasi","Mutasi"].forEach(m=>{const z=y.filter(r=>r.mod===m).sort((a,b)=>(b.age||0)-(a.age||0));if(!z.length)return;t+=`\n_${m}_`;z.slice(0,10).forEach((r,i)=>t+=`\n${i+1}. ${r.tag} | ${norm(r.barang).slice(0,45)} | ${r.age} hari`);if(z.length>10)t+=`\n...dan ${z.length-10} item lainnya`})});
+    ["Aktivasi","Mutasi"].forEach(m=>{const z=y.filter(r=>r.mod===m).sort((a,b)=>(b.age||0)-(a.age||0));if(!z.length)return;t+=`\n_${m}_`;z.slice(0,10).forEach((r,i)=>t+=`\n${i+1}. ${r.tag} | ${norm(r.barang).slice(0,45)} | ${r.age} hari${isV(k)?" | "+(r.pn||"-")+" ("+(r.pnik||"-")+")":""}`);if(z.length>10)t+=`\n...dan ${z.length-10} item lainnya`})});
    return t+"\n\n"+(x.some(r=>r.aksi)?"Mohon item yang menunggu toko segera diselesaikan di Asset Online (menu approval sesuai status). ":"")+(x.some(r=>!r.aksi)?"Item yang menunggu AM/FA/GSM/Accounting sedang kami follow-up; mohon dibantu dikawal bila ada kendala. ":"")+"Jika sudah diproses, mohon info ke Staff FA Branch Palu. Terima kasih."};
   p.innerHTML=`<h2>Share ke Toko (${keys.length} toko)</h2><div class="sub">Pilih status yang ingin dishare. Pesan dikelompokkan per status beserta tindak lanjutnya (termasuk proxy Pejabat Toko).</div><div class="bar"><select id="sm">${modeOpt}</select><select id="ss">${keys.map(k=>`<option value="${k}">${k} - ${(info[k]||{}).nama||"Branch Palu"} (${by[k].length} item, ${mx(k)} hari)</option>`).join("")}</select></div><br><textarea id="mt" rows="18" style="width:100%;font:12.5px monospace;background:var(--c);color:var(--t);border:1px solid var(--b);border-radius:6px;padding:8px"></textarea>
   <div class="bar" style="margin-top:8px"><button id="cp">Salin pesan</button><button id="wa" class="alt">Buka WhatsApp</button><button id="all" class="alt">Unduh semua toko (.txt)</button><span id="ok" class="ok"></span></div>`;
@@ -182,6 +203,40 @@ function render(){
   $("#cp").onclick=()=>{const v=$("#mt").value;$("#mt").select();(navigator.clipboard?navigator.clipboard.writeText(v):Promise.reject()).catch(()=>document.execCommand("copy")).then(()=>{$("#ok").textContent="Tersalin"})};
   $("#wa").onclick=()=>window.open("https://wa.me/?text="+encodeURIComponent($("#mt").value),"_blank");
   $("#all").onclick=()=>{saveFile("pesan_wa_toko.txt",keys.map(msg).join("\n\n"+"=".repeat(40)+"\n\n"))};
+ }else if(tab==="oz"){
+  const oa=AA.concat(MM).filter(r=>r.oz&&r.pnik&&inM(r)),pp=oa.filter(r=>r.pend),UN=["Office","Warehouse","Toko / Area","Tidak ada di master aktif"];
+  const sg={};pp.forEach(r=>{const o=sg[r.s]=sg[r.s]||{r,a:0,m:0,age:0};r.mod==="Aktivasi"?o.a++:o.m++;if(r.age>o.age)o.age=r.age});
+  const srows=Object.values(sg).sort((u,v)=>(v.a+v.m)-(u.a+u.m)).map(o=>[o.r.st,who(o.r),o.a,o.m,badge(o.age),D.par[o.r.s]||DEF[o.r.s]||"Cek status di Asset Online"]);
+  const arahs=[...new Set(pp.map(r=>r.arah))].sort(),stl=[...new Set(pp.map(r=>r.st))].sort();
+  p.innerHTML=`<h2>GIT SOZ1 · tujuan ${OZ} · ${lb}</h2><div class="sub">Aktivasi dan mutasi dengan UU tujuan ${OZ} (mutasi ke toko tidak ditampilkan di sini). Unit dibaca dari lokasi kerja penerima (NIK tujuan) pada data karyawan: DC = Warehouse, OFFICE = Office. Hanya item yang punya user penerima (NIK tujuan). Office dan Warehouse juga tersedia sebagai "toko" di Cari Toko dan Share ke Toko.</div>
+  <div id="ozk" class="kpi"></div><div class="bar"><input id="oq" placeholder="Cari tag, barang, dokumen, nama, NIK..." style="flex:1;min-width:200px"><select id="oun"><option value="">Semua unit</option>${UN.map(a=>`<option>${a}</option>`).join("")}</select><select id="oa"><option value="">Semua arah</option>${arahs.map(a=>`<option>${a}</option>`).join("")}</select><select id="os"><option value="">Semua status</option>${stl.map(a=>`<option>${a}</option>`).join("")}</select><button id="ox" class="alt">Unduh Excel (belum selesai + riwayat)</button><button id="oxa" class="alt">Buka semua</button><button id="oxc" class="alt">Tutup semua</button><button id="oxs" class="alt">Share semua</button></div><div id="ozm" class="card" style="display:none;margin-top:10px"><div class="bar"><b id="ozt">Pesan WA</b><span style="flex:1"></span><button id="ozx" class="alt">Tutup</button></div><textarea id="ozta" rows="14" style="width:100%;margin-top:8px;font:12.5px monospace;background:var(--c);color:var(--t);border:1px solid var(--b);border-radius:6px;padding:8px"></textarea><div class="bar" style="margin-top:8px"><button id="ozc">Salin pesan</button><button id="ozw" class="alt">Buka WhatsApp</button><span id="ozok" class="ok"></span></div></div><div id="ol"></div>
+  <h2 style="margin-top:14px">Ringkasan semua status (${lb})</h2>${srows.length?table(["Status","Menunggu","Aktivasi","Mutasi","Aging tertua","Tindak lanjut"],srows,[2,3]):'<div class="sub ok">Tidak ada item belum selesai pada periode ini.</div>'}`;
+  let cur=null,curG=[];
+  const gl=l=>l==="DC"?"DC (Warehouse)":(l||"-");
+  const msgOne=g=>{const x=g.x.slice().sort((u,v)=>(v.age||0)-(u.age||0)),ge={};x.forEach(r=>(ge[r.s]=ge[r.s]||[]).push(r));
+   const gs=Object.values(ge).sort((u,v)=>(v[0].aksi-u[0].aksi)||(Math.max(...v.map(r=>r.age||0))-Math.max(...u.map(r=>r.age||0))));
+   let t=`*FOLLOW-UP APPROVAL ASSET ONLINE · GIT SOZ1*\nPenerima: ${g.pn} (NIK ${g.nik})\nLokasi kerja: ${g.unit}${g.loc?" · "+gl(g.loc):""}${g.dept?" · "+g.dept:""}\nPer ${$("#ref").value}\n\nAda *${x.length} item* belum selesai, tertua *${Math.max(...x.map(r=>r.age||0))} hari*:`;
+   gs.forEach(y=>{const tl=D.par[y[0].s]||DEF[y[0].s]||"Cek status di Asset Online";t+=`\n\n*${y[0].st} (${y.length})* - ${tl}`;
+    ["Aktivasi","Mutasi"].forEach(m=>{const z=y.filter(r=>r.mod===m);if(!z.length)return;t+=`\n_${m}_`;z.slice(0,10).forEach((r,i)=>t+=`\n${i+1}. ${norm(r.tag)} | ${norm(r.barang).slice(0,45)} | ${r.age} hari`);if(z.length>10)t+=`\n...dan ${z.length-10} item lainnya`})});
+   return t+"\n\nMohon segera diselesaikan di Asset Online. Jika sudah diproses, mohon info ke Staff FA Branch Palu. Terima kasih."};
+  const showMsg=(t,m)=>{$("#ozm").style.display="";$("#ozt").textContent=t;$("#ozta").value=m;$("#ozok").textContent="";$("#ozm").scrollIntoView&&$("#ozm").scrollIntoView({behavior:"smooth",block:"nearest"})};
+  const drawO=()=>{const q=lc($("#oq").value),un=$("#oun").value,a=$("#oa").value,s=$("#os").value;
+   cur=r=>(!un||r.unit===un)&&(!a||r.arah===a)&&(!s||r.st===s)&&(!q||lc([r.tag,r.barang,r.nttb,r.nopm,r.pn,r.pnik,r.sn].join(" ")).includes(q));
+   const R=pp.filter(cur).sort((u,v)=>(v.age||0)-(u.age||0)),c=u=>R.filter(r=>r.unit===u).length,oth=R.length-c("Office")-c("Warehouse");
+   $("#ozk").innerHTML=`<div class="${c("Office")?"t":""}"><b>${c("Office")}</b><span>Office belum selesai</span></div><div class="${c("Warehouse")?"t":""}"><b>${c("Warehouse")}</b><span>Warehouse belum selesai</span></div><div class="${oth?"k":""}"><b>${oth}</b><span>Toko / Area / tidak ada di master</span></div><div><b>${R.length}</b><span>Total belum selesai</span></div>`;
+   const gm={};R.forEach(r=>{const k=r.pnik;(gm[k]=gm[k]||{pn:r.pn||"(nama tidak ada di master)",nik:r.pnik,loc:r.ploc||"",dept:r.pdept||"",pos:r.ppos||"",unit:r.unit,x:[]}).x.push(r)});
+   curG=Object.values(gm).sort((u,v)=>v.x.length-u.x.length||u.pn.localeCompare(v.pn));
+   $("#ol").innerHTML=`<div class="sub">${curG.length} penerima · ${R.length} item. Klik nama untuk menampilkan atau menyembunyikan item.</div>`+(curG.length?curG.map(g=>{const open=OZX.has(g.nik),age=Math.max(...g.x.map(r=>r.age||0));
+    return `<div class="card ozg" style="margin-bottom:8px;padding:10px"><div class="tg" data-g="${esc(g.nik)}" style="margin:0;flex-wrap:wrap"><button class="tgb" title="Tampilkan / sembunyikan">${open?"\u2212":"+"}</button><b>${esc(g.pn)}</b><span class="chip">NIK ${esc(g.nik)}</span><span class="chip">${esc(g.unit)}${g.loc?" · "+esc(gl(g.loc)):""}</span><span class="sm">${esc(g.dept)}${g.pos?" · "+esc(g.pos):""}</span><span style="flex:1"></span><span>${g.x.length} item</span>${badge(age)}<button class="alt" data-s="${esc(g.nik)}">Share WA</button></div><div class="sb" style="margin-top:8px" ${open?"":"hidden"}>`+
+     table(["Modul","Arah","Menunggu","Status","Pengirim (NIK awal)","UU awal","Tgl input","No dokumen","No PM","Tgl PM","No tag","Barang","Aging"],g.x.map(r=>[r.mod,r.arah,who(r),r.st,esc(r.sn||"-"),norm(r.asal)||"-",fd(r.tgl),norm(r.nttb),pmn(r),pmt(r),norm(r.tag),norm(r.barang),badge(r.age)]))+"</div></div>"}).join(""):'<div class="sub ok">Tidak ada item belum selesai dengan user penerima pada pilihan ini.</div>');
+   $("#ol").querySelectorAll(".ozg .tg").forEach(t=>t.onclick=e=>{if(e.target.closest&&e.target.closest("button[data-s]"))return;const id=t.dataset.g;OZX.has(id)?OZX.delete(id):OZX.add(id);t.nextElementSibling.hidden=!OZX.has(id);t.querySelector(".tgb").textContent=OZX.has(id)?"\u2212":"+"});
+   $("#ol").querySelectorAll("button[data-s]").forEach(b=>b.onclick=e=>{e.stopPropagation();const g=curG.find(z=>z.nik===b.dataset.s);if(g)showMsg("Pesan WA · "+g.pn,msgOne(g))})};
+  $("#oxa").onclick=()=>{curG.forEach(g=>OZX.add(g.nik));drawO()};$("#oxc").onclick=()=>{OZX.clear();drawO()};
+  $("#oxs").onclick=()=>{if(!curG.length)return;showMsg("Pesan WA · semua penerima ("+curG.length+")",curG.map(msgOne).join("\n\n"+"=".repeat(28)+"\n\n"))};
+  $("#ozx").onclick=()=>{$("#ozm").style.display="none"};
+  $("#ozc").onclick=()=>{const v=$("#ozta").value;$("#ozta").select();(navigator.clipboard?navigator.clipboard.writeText(v):Promise.reject()).catch(()=>document.execCommand("copy")).then(()=>{$("#ozok").textContent="Tersalin"})};
+  $("#ozw").onclick=()=>window.open("https://wa.me/?text="+encodeURIComponent($("#ozta").value),"_blank");
+  $("#oq").oninput=drawO;["oun","oa","os"].forEach(i=>$("#"+i).onchange=drawO);$("#ox").onclick=()=>xl(null,"oz",cur);drawO();
  }else if(tab==="lk"){
   const a=AD();
   p.innerHTML=`<h2>Link anak toko (hanya lihat)</h2><div class="sub">Data dienkripsi dengan sandi di bawah. Anak toko membuka link, memasukkan sandi, lalu bisa mencari toko dan mengunduh Excel. Setelah pengaturan GitHub diisi, setiap kali Anda mengunggah file Excel di halaman admin ini, data di link anak toko diperbarui otomatis dengan sandi yang sama (tanpa membuat atau mengunggah data.js).</div>
@@ -217,7 +272,7 @@ const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").r
 const AD=()=>{try{return JSON.parse(localStorage.getItem("gitadm")||"{}")}catch(e){return{}}},setAD=o=>{try{localStorage.setItem("gitadm",JSON.stringify({...AD(),...o}))}catch(e){}};
 const ghErr=e=>e instanceof TypeError?"Tidak bisa terhubung ke GitHub. Buka halaman admin dari file lokal, server lokal, atau GitHub Pages dan periksa internet.":"Gagal: "+e.message;
 async function buildText(pw){const v=$("#ref").value,lab=+v.slice(8,10)+" "+ML(v.slice(0,7));await new Promise(r=>setTimeout(r,40));
- const o=await enc({akt:D.akt.map(({_row,...r})=>r),mut:D.mut.map(({_row,...r})=>r),str:D.str,par:D.par,rf:v,kr:+$("#kr").value,ti:+$("#ti").value},pw);
+ const o=await enc({akt:D.akt.map(({_row,...r})=>r),mut:D.mut.map(({_row,...r})=>r),str:D.str,par:D.par,rf:v,kr:+$("#kr").value,ti:+$("#ti").value,emp:empSubset()},pw);
  const chk=await dec(o,pw);if(!chk||chk.akt.length!==D.akt.length)throw new Error("verifikasi sandi gagal");return "window.GIT_DATA="+JSON.stringify({...o,label:lab})+";"}
 async function publishNow(a){const text=await buildText(a.pw),br=a.branch||"main",base="https://api.github.com/repos/"+a.owner+"/"+a.repo+"/contents/data.js",
  hd={Authorization:"Bearer "+a.token,Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"};let sha;
@@ -228,15 +283,45 @@ async function publishNow(a){const text=await buildText(a.pw),br=a.branch||"main
  if(!r.ok)throw new Error("GitHub "+r.status+": "+(((await r.json().catch(()=>({}))).message)||""));return true}
 async function autoPub(){const a=AD();if(VIEW||!a.auto||!a.pw||!a.owner||!a.repo||!a.token)return;const i=$("#info"),t=" · menerbitkan ke link anak toko...";i.textContent+=t;
  try{await publishNow(a);i.textContent=i.textContent.replace(t,"")+" · link anak toko diperbarui "+new Date().toTimeString().slice(0,5)}catch(e){i.textContent=i.textContent.replace(t,"")+" · gagal menerbitkan: "+ghErr(e)}}
-function xl(stores){const X=analyse(),mf=$("#bln").value,lb=mf?ML(mf):"Semua bulan",sel=r=>r.pend&&(!mf||r.bln===mf)&&(!stores||stores.has(r.tp)),srt=(a,b)=>(b.age||0)-(a.age||0);
- const bs=r=>{const s=X.info[r.tp]||{};return[r.tp,s.nama||"Branch Palu",s.ac||"",s.am||"",s.pj||""]},wh=r=>WH[r.s]||"Cek Asset Online";
- const A=X.A.filter(sel).sort(srt).map(r=>[...bs(r),fd(r.tgl),norm(r.nttb),r.st,wh(r),norm(r.tag),norm(r.barang),r.age,r.bln?ML(r.bln):""]);
- const M=X.M.filter(sel).sort(srt).map(r=>[...bs(r),fd(r.tgl),norm(r.nttb),norm(r.asal),norm(r.toko),r.st,wh(r),norm(r.nopm),r.nopm?fd(r.tsel):"",norm(r.tag),norm(r.barang),r.age,r.bln?ML(r.bln):""]);
- const h0=["KODE TOKO","NAMA TOKO","AC","AM","PEJABAT TOKO"],wb=XLSX.utils.book_new();
- const add=(n,hd,rows,w)=>{const ws=XLSX.utils.aoa_to_sheet([hd,...rows]);ws["!cols"]=w.map(x=>({wch:x}));ws["!autofilter"]={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:Math.max(rows.length,1),c:hd.length-1}})};XLSX.utils.book_append_sheet(wb,ws,n)};
- add("Aktivasi",[...h0,"TGL NTTB","NO NTTB","STATUS","MENUNGGU","NO TAG","NAMA BARANG","AGING (HARI)","BULAN INPUT"],A,[10,28,20,22,22,12,26,22,12,22,46,10,12]);
- add("Mutasi",[...h0,"TGL PENGAJUAN","NO PENGAJUAN","UU AWAL","UU TUJUAN","STATUS","MENUNGGU","NO PM","TGL PM","NO TAG","NAMA BARANG","AGING (HARI)","BULAN INPUT"],M,[10,28,20,22,22,14,26,9,10,22,12,24,12,22,46,10,12]);
- const nm=stores&&stores.size===1?[...stores][0]:"semua-toko";saveFile("GIT_Belum_Selesai_"+nm+"_"+lb.replace(" ","-")+".xlsx",new Uint8Array(XLSX.write(wb,{bookType:"xlsx",type:"array"})))}
+function xl(stores,mode,pred){
+ const X=analyse(),mf=$("#bln").value,lb=mf?ML(mf):"Semua bulan",kr=+$("#kr").value,ti=+$("#ti").value;
+ const oz=mode==="oz"||!!(stores&&stores.size&&[...stores].every(isV)),dt=v=>toDate(v)||"";
+ const inSel=r=>(!mf||r.bln===mf)&&(mode==="oz"?(r.oz&&r.pnik&&(!pred||pred(r))):(!stores||stores.has(r.tp)||stores.has(r.vk)));
+ const keep=r=>inSel(r)&&(r.pend||(oz&&r.s==="done"));
+ const srt=(u,v)=>((v.pend?1:0)-(u.pend?1:0))||(u.pend?(v.age||0)-(u.age||0):(+dt(v.tgl)||0)-(+dt(u.tgl)||0));
+ const wh=r=>WH[r.s]||"Cek Asset Online",kd=r=>r.pend?"BELUM SELESAI":"SELESAI",ag=r=>r.pend&&r.age!=null?r.age:"",locx=l=>l==="DC"?"DC (Warehouse)":(l||"");
+ const bs=r=>{if(oz)return[r.unit||"",locx(r.ploc),r.pnik||"",r.pn||"",r.pdept||"",r.ppos||""];const s=X.info[r.tp]||{};return[r.tp,s.nama||"Branch Palu",s.ac||"",s.am||"",s.pj||""]};
+ const Ar=X.A.filter(keep).sort(srt),Mr=X.M.filter(keep).sort(srt);
+ const brg=r=>norm(r.barang)||"(nama barang tidak diisi)";
+ let hA,hM,A,M;
+ if(oz){
+  const cm=[["UNIT",r=>r.unit||""],["NIK PENERIMA",r=>r.pnik||""],["NAMA PENERIMA",r=>r.pn||""],["NO TAG",r=>norm(r.tag)],["NAMA BARANG",brg],["KONDISI",kd],["STATUS",r=>r.st],["MENUNGGU",wh],["TGL PENGAJUAN",r=>dt(r.tgl)],["NO PENGAJUAN",r=>norm(r.nttb)],["UU AWAL",r=>norm(r.asal)],["UU TUJUAN",r=>norm(r.toko)],["PENGIRIM (NIK AWAL)",r=>r.sn||""],["NO PM",r=>norm(r.nopm)],["TGL PM",r=>r.nopm?dt(r.tsel):""],["AGING (HARI)",ag],["TGL SELESAI",r=>r.pend?"":dt(r.tsel)],["LOKASI KERJA PENERIMA",r=>locx(r.ploc)],["DEPARTEMEN",r=>r.pdept||""],["POSISI PENERIMA",r=>r.ppos||""],["BULAN INPUT",r=>r.bln?ML(r.bln):""]];
+  const ca=[["UNIT",r=>r.unit||""],["NIK PENERIMA",r=>r.pnik||""],["NAMA PENERIMA",r=>r.pn||""],["NO TAG",r=>norm(r.tag)],["NAMA BARANG",brg],["KONDISI",kd],["STATUS",r=>r.st],["MENUNGGU",wh],["TGL NTTB",r=>dt(r.tgl)],["NO NTTB",r=>norm(r.nttb)],["AGING (HARI)",ag],["TGL SELESAI",r=>r.pend?"":dt(r.tsel)],["LOKASI KERJA PENERIMA",r=>locx(r.ploc)],["DEPARTEMEN",r=>r.pdept||""],["POSISI PENERIMA",r=>r.ppos||""],["BULAN INPUT",r=>r.bln?ML(r.bln):""]];
+  hM=cm.map(c=>c[0]);hA=ca.map(c=>c[0]);M=Mr.map(r=>cm.map(c=>c[1](r)));A=Ar.map(r=>ca.map(c=>c[1](r)));
+ }else{
+  const hB=["KODE TOKO","NAMA TOKO","AC","AM","PEJABAT TOKO"],bs=r=>{const s=X.info[r.tp]||{};return[r.tp,s.nama||"Branch Palu",s.ac||"",s.am||"",s.pj||""]};
+  hA=[...hB,"TGL NTTB","NO NTTB","STATUS","MENUNGGU","NO TAG","NAMA BARANG","AGING (HARI)","BULAN INPUT"];
+  hM=[...hB,"TGL PENGAJUAN","NO PENGAJUAN","UU AWAL","UU TUJUAN","STATUS","MENUNGGU","NO PM","TGL PM","NO TAG","NAMA BARANG","AGING (HARI)","BULAN INPUT"];
+  A=Ar.map(r=>[...bs(r),dt(r.tgl),norm(r.nttb),r.st,wh(r),norm(r.tag),brg(r),ag(r),r.bln?ML(r.bln):""]);
+  M=Mr.map(r=>[...bs(r),dt(r.tgl),norm(r.nttb),norm(r.asal),norm(r.toko),r.st,wh(r),norm(r.nopm),r.nopm?dt(r.tsel):"",norm(r.tag),brg(r),ag(r),r.bln?ML(r.bln):""]);
+ }
+ const wb=XLSX.utils.book_new(),HS={font:{bold:true,color:{rgb:"FFFFFF"},sz:10},fill:{patternType:"solid",fgColor:{rgb:"1F3864"}},alignment:{horizontal:"center",vertical:"center",wrapText:true},border:{bottom:{style:"thin",color:{rgb:"7F7F7F"}}}};
+ const fill=c=>({fill:{patternType:"solid",fgColor:{rgb:c}}});
+ const add=(name,head,rows)=>{const ws=XLSX.utils.aoa_to_sheet([head,...rows],{cellDates:true}),ci=n=>head.indexOf(n),cK=ci("KONDISI"),cG=ci("AGING (HARI)")>=0?ci("AGING (HARI)"):ci("AGING TERTUA (HARI)");
+  head.forEach((t,c)=>{const q=XLSX.utils.encode_cell({r:0,c});if(ws[q])ws[q].s=HS});
+  rows.forEach((row,i)=>row.forEach((v,c)=>{const q=XLSX.utils.encode_cell({r:i+1,c});if(!ws[q])return;
+   if(v instanceof Date)ws[q].z="dd-mmm-yyyy";
+   if(c===cK)ws[q].s={...fill(v==="SELESAI"?"E2EFDA":"FFF2CC"),font:{bold:true}};
+   if(c===cG&&typeof v==="number"&&v>0)ws[q].s=v>=kr?{...fill("FDE2E2"),font:{bold:true,color:{rgb:"B32727"}}}:v>=ti?{...fill("FDECCF"),font:{bold:true,color:{rgb:"9A5A05"}}}:{}}));
+  ws["!cols"]=head.map((t,c)=>{let w=Math.min(String(t).length+2,30);rows.slice(0,200).forEach(r=>{const v=r[c];const l=v instanceof Date?11:String(v==null?"":v).length;if(l+2>w)w=Math.min(l+2,48)});return{wch:Math.max(w,9)}});
+  ws["!rows"]=[{hpx:32}];ws["!autofilter"]={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:Math.max(rows.length,1),c:head.length-1}})};XLSX.utils.book_append_sheet(wb,ws,name)};
+ if(oz){const gm={};Ar.concat(Mr).forEach(r=>{const g=gm[r.pnik]=gm[r.pnik]||{pn:r.pn||"(nama tidak ada di master)",nik:r.pnik,unit:r.unit||"",loc:locx(r.ploc),dept:r.pdept||"",pos:r.ppos||"",b:0,s:0,age:0,br:[]};r.pend?g.b++:g.s++;if(r.pend){if(r.age>g.age)g.age=r.age;const n=norm(r.barang);if(n&&!g.br.includes(n))g.br.push(n)}});
+  const rs=Object.values(gm).sort((u,v)=>v.b-u.b||(v.b+v.s)-(u.b+u.s)).map(g=>[g.pn,g.nik,g.unit,g.br.slice(0,5).join("; ")+(g.br.length>5?" (+"+(g.br.length-5)+" lainnya)":""),g.loc,g.dept,g.pos,g.b,g.s,g.b+g.s,g.b?g.age:""]);
+  if(rs.length)add("Ringkasan Penerima",["NAMA PENERIMA","NIK","UNIT","BARANG BELUM SELESAI","LOKASI KERJA","DEPARTEMEN","POSISI","BELUM SELESAI","SELESAI","TOTAL","AGING TERTUA (HARI)"],rs)}
+ if(M.length)add("Mutasi",hM,M);if(A.length)add("Aktivasi",hA,A);
+ if(!wb.SheetNames.length){const ws=XLSX.utils.aoa_to_sheet([["Tidak ada data untuk pilihan ini ("+lb+")."]]);ws["!cols"]=[{wch:60}];XLSX.utils.book_append_sheet(wb,ws,"Info")}
+ const nm=oz?"SOZ1_"+(mode==="oz"?"semua":[...stores][0].replace(/^SOZ1-/,"")):stores&&stores.size===1?"Belum_Selesai_"+[...stores][0]:"Belum_Selesai_semua-toko";
+ saveFile("GIT_"+nm+"_"+lb.replace(" ","-")+".xlsx",new Uint8Array(XLSX.write(wb,{bookType:"xlsx",type:"array",cellDates:true})))}
 let VPW="";
 async function openData(o,pw0){let d=null,er=null;for(const pw of [...new Set([pw0,pw0.trim()])]){if(!pw)continue;try{d=await dec(o,pw);VPW=pw;break}catch(e){er=e}}return{d,er}}
 async function poll(){try{const r=await fetch("data.js?v="+Date.now(),{cache:"no-store"});if(!r.ok)return;const t=await r.text(),m=t.match(/^\s*window\.GIT_DATA=(\{[\s\S]*\});?\s*$/);if(!m)return;
@@ -270,8 +355,12 @@ function initSort(){document.querySelectorAll(".w table:not([data-s])").forEach(
   sel.onchange=()=>{const i=+sel.value;SORT[key]={i,d:1};sortTable(t,i,1)};bar.querySelector("button").onclick=()=>flip(+sel.value);
   if(SORT[key]){sel.value=SORT[key].i;sortTable(t,SORT[key].i,SORT[key].d)}})}
 if(typeof MutationObserver!=="undefined")new MutationObserver(()=>requestAnimationFrame(initSort)).observe(document.body,{childList:true,subtree:true});
-function go(t){tab=t;document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("alt",x.dataset.t!==t));render()}
+function go(t){tab=t;document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("alt",x.dataset.t!==t));
+ const b=document.querySelector('.tabs button[data-t="'+t+'"]'),c=$("#mcur");if(b&&c)c.textContent=b.textContent;const ml=$("#mlist");if(ml)ml.hidden=true;const mb=$("#mbtn");if(mb)mb.setAttribute("aria-expanded","false");render()}
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>go(b.dataset.t));
+if($("#mbtn")){$("#mbtn").onclick=e=>{e.stopPropagation();const ml=$("#mlist");ml.hidden=!ml.hidden;$("#mbtn").setAttribute("aria-expanded",String(!ml.hidden))};
+ document.addEventListener("click",e=>{const ml=$("#mlist");if(ml&&!ml.hidden&&!(e.target.closest&&e.target.closest(".menu"))){ml.hidden=true;$("#mbtn").setAttribute("aria-expanded","false")}});
+ document.addEventListener("keydown",e=>{if(e.key==="Escape"){const ml=$("#mlist");if(ml&&!ml.hidden){ml.hidden=true;$("#mbtn").setAttribute("aria-expanded","false")}}})}
 
 if("serviceWorker" in navigator&&location.protocol.startsWith("http"))window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
 boot();

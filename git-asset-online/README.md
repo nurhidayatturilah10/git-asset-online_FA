@@ -32,3 +32,6 @@ Lihat `PANDUAN_GITHUB_PAGES.md` untuk link github.io dan domain gratis.
 
 ## Jaringan lokal
 `node server.js` menyajikan aplikasi ke perangkat lain di Wi-Fi/LAN yang sama. Lihat `PANDUAN_GITHUB_PAGES.md` bagian E.
+
+## Data karyawan
+Sheet DATA KARYAWAN (master DAKAR aktif) di REPORT_GIT.xlsx menentukan Pejabat Toko dan unit Office/Warehouse pada GIT SOZ1. Lihat PANDUAN_GITHUB_PAGES.md bagian G.

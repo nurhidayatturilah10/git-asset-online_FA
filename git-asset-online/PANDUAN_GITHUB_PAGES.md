@@ -62,3 +62,13 @@ Catatan keamanan:
 - Gunakan tombol "Tampilkan sandi" untuk memastikan ejaan. Keyboard HP sering mengubah huruf pertama menjadi kapital; kolom sandi sudah dimatikan autokapitalnya, tetapi sandi yang disalin dari chat bisa membawa spasi (spasi di ujung diabaikan otomatis).
 - Pastikan `data.js` yang diunggah adalah file terbaru dan dibuat dengan sandi yang sama. File lama tetap memakai sandi lama.
 - Tombol "Buat data.js" kini menguji sendiri bahwa sandi bisa membuka data sebelum file disimpan.
+
+## G. Master DAKAR, Pejabat Toko otomatis, dan GIT SOZ1 (Office & Warehouse)
+Semua data ada di satu file `REPORT_GIT.xlsx`. Aplikasi hanya meminta unggahan file ini.
+1. Sheet **DATA KARYAWAN**: tempel sheet `EXIST` (karyawan aktif) dari file DAKAR apa adanya (header di baris 2, data mulai baris 3; kolom NIK, NAME, POSITION CODE DESC, DEPARTMENT, STORE CODE, LOCATION, POSITION GROUPING). Kolom rumus bantu di sebelah kanan jangan dihapus. Sheet OUT tidak dipakai.
+2. Sheet **PEJABAT TOKO** terisi otomatis: karyawan CHIEF OF STORE (COS); bila tidak ada, ASISTANT CHIEF OF STORE (ACOS); bila beberapa orang, NIK terkecil (tertua). Toko yang tidak punya COS/ACOS (mis. franchise) diisi manual di kolom G:H (kuning).
+3. Aplikasi menghitung Pejabat Toko langsung dari DATA KARYAWAN dengan aturan yang sama (tidak bergantung pada hasil rumus Excel).
+4. **GIT SOZ1**: aktivasi dan mutasi dengan UU tujuan SOZ1 yang punya user penerima (NIK tujuan). Lokasi kerja penerima dibaca dari master DAKAR: DC = Warehouse, OFFICE = Office. Item tanpa NIK tujuan tidak ditampilkan. Daftar disusun per penerima: klik nama untuk menampilkan atau menyembunyikan item (awalnya tersembunyi), tombol **Share WA** per penerima, dan **Share semua** untuk pesan seluruh penerima.
+5. **Office SOZ1** dan **Warehouse SOZ1** berfungsi seperti toko: bisa dicari di Cari Toko, punya profil (belum selesai dan histori dengan nama penerima, NIK, lokasi kerja), bisa dishare lewat Share ke Toko, dan bisa diunduh ke Excel.
+   Unduhan Excel SOZ1 (menu GIT SOZ1 dan profil Office/Warehouse) berisi sheet Ringkasan Penerima, Mutasi, dan Aktivasi: item belum selesai dan riwayat selesai dengan kolom KONDISI, tanggal asli, NIK, nama, lokasi kerja, departemen, posisi, dan filter di judul kolom.
+6. Bila pengaturan GitHub (bagian D) aktif, link anak toko ikut diperbarui otomatis setiap kali `REPORT_GIT.xlsx` diunggah.
