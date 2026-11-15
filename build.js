@@ -6,6 +6,7 @@ const safe = s => s.replace(/<\/script/gi, "<\\/script").replace(/\uFFFD/g, "\\u
 let html = read("index.html");
 html = html.replace('<link rel="stylesheet" href="css/style.css">', () => "<style>" + read("css/style.css") + "</style>");
 html = html.replace('<script src="vendor/xlsx.full.min.js"></script>', () => "<script>" + safe(read("vendor/xlsx.full.min.js")) + "</script>");
+html = html.replace('<script src="vendor/cryptofb.js"></script>', () => "<script>" + safe(read("vendor/cryptofb.js")) + "</script>");
 html = html.replace('<script src="js/app.js"></script>', () => "<script>" + safe(read("js/app.js")) + "</script>");
 fs.mkdirSync("dist", { recursive: true });
 fs.writeFileSync("dist/GIT_Asset_Online.html", html);
